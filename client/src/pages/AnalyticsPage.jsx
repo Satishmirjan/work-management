@@ -7,7 +7,11 @@ import {
   Tooltip,
   XAxis,
   YAxis,
+  PieChart,
+  Pie,
+  Cell,
 } from 'recharts';
+
 import { fetchTaskOptions, fetchTaskStats } from '../services/taskService';
 import {
   defaultActivities,
@@ -30,6 +34,8 @@ const buildOptions = (fallback = [], fetched = []) => {
 
 const tooltipFormatter = (value) => [value, 'Tasks'];
 
+const PIE_COLORS = ['#6366f1', '#f97316', '#22c55e', '#eab308', '#06b6d4', '#ef4444'];
+
 function AnalyticsPage() {
   const [filters, setFilters] = useState(defaultFilters);
   const [appliedFilters, setAppliedFilters] = useState(defaultFilters);
@@ -38,14 +44,18 @@ function AnalyticsPage() {
     tasksByProject: [],
     tasksByPerson: [],
   });
+
   const [options, setOptions] = useState({
     projects: defaultProjects,
     people: defaultPeople,
     milestones: defaultMilestones,
     genericActivities: defaultActivities,
   });
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  const [pieType, setPieType] = useState('project'); // project/person toggle
 
   useEffect(() => {
     const loadOptions = async () => {
@@ -97,24 +107,30 @@ function AnalyticsPage() {
     setAppliedFilters(defaultFilters);
   };
 
-  const detailedRows = stats.tasksByProject.length ? stats.tasksByProject : stats.tasksByPerson;
+  const pieData = pieType === 'project' ? stats.tasksByProject : stats.tasksByPerson;
+
+  const detailedRows =
+    stats.tasksByProject.length ? stats.tasksByProject : stats.tasksByPerson;
+
   const detailedLabel = stats.tasksByProject.length ? 'Project' : 'Person';
 
   return (
-    <section>
-      <div className="page-card" style={{ marginBottom: '2rem' }}>
-        <h1 className="page-title" style={{ marginBottom: '0.5rem' }}>
-          Analytics
-        </h1>
-        <p className="page-subtitle" style={{ marginBottom: '1.5rem' }}>
-          Track productivity trends across projects, people, and activities.
+    <section className="fade-in" style={{ padding: '1rem' }}>
+
+      {/* Header */}
+      <div className="page-card shadow-lg" style={{ marginBottom: '2rem' }}>
+        <h1 className="page-title">📊 Analytics Dashboard</h1>
+        <p className="page-subtitle">
+          View task performance insights across projects and team members.
         </p>
 
-        <div className="filters-bar">
+        {/* Filters */}
+        <div className="filters-bar glass-card">
           <div className="filters-grid">
+
             <div className="form-group">
-              <label htmlFor="project-filter">Project</label>
-              <select id="project-filter" name="project" value={filters.project} onChange={handleFilterChange}>
+              <label>Project</label>
+              <select name="project" value={filters.project} onChange={handleFilterChange}>
                 <option value="all">All Projects</option>
                 {options.projects.map((project) => (
                   <option key={project} value={project}>
@@ -125,8 +141,8 @@ function AnalyticsPage() {
             </div>
 
             <div className="form-group">
-              <label htmlFor="person-filter">Person</label>
-              <select id="person-filter" name="person" value={filters.person} onChange={handleFilterChange}>
+              <label>Person</label>
+              <select name="person" value={filters.person} onChange={handleFilterChange}>
                 <option value="all">All People</option>
                 {options.people.map((person) => (
                   <option key={person} value={person}>
@@ -137,131 +153,152 @@ function AnalyticsPage() {
             </div>
 
             <div className="form-group">
-              <label htmlFor="fromDate">From Date</label>
-              <input id="fromDate" name="fromDate" type="date" value={filters.fromDate} onChange={handleFilterChange} />
+              <label>From</label>
+              <input type="date" name="fromDate" value={filters.fromDate} onChange={handleFilterChange} />
             </div>
 
             <div className="form-group">
-              <label htmlFor="toDate">To Date</label>
-              <input id="toDate" name="toDate" type="date" value={filters.toDate} onChange={handleFilterChange} />
+              <label>To</label>
+              <input type="date" name="toDate" value={filters.toDate} onChange={handleFilterChange} />
             </div>
           </div>
 
           <div className="filter-actions">
-            <button type="button" className="btn btn-primary" onClick={handleApplyFilters}>
-              Apply
-            </button>
-            <button type="button" className="btn btn-secondary" onClick={handleClearFilters}>
-              Clear
-            </button>
+            <button className="btn btn-primary" onClick={handleApplyFilters}>Apply</button>
+            <button className="btn btn-secondary" onClick={handleClearFilters}>Clear</button>
           </div>
         </div>
       </div>
 
+      {/* Data */}
       {loading ? (
         <div className="empty-state">Loading analytics...</div>
       ) : error ? (
         <div className="empty-state">{error}</div>
       ) : (
         <>
+          {/* Summary Cards */}
           <div className="stats-grid">
-            <div className="stat-card">
-              <div className="stat-label">Total Tasks</div>
-              <div className="stat-value">{stats.summary.total}</div>
+            <div className="stat-card pop">
+              <h4>Total Tasks</h4>
+              <p className="stat-value">{stats.summary.total}</p>
             </div>
 
-            <div className="stat-card">
-              <div className="stat-label">
-                Tasks per {filters.project === 'all' ? 'Project' : filters.project}
-              </div>
-              <div className="stat-value">
-                {filters.project === 'all'
-                  ? stats.tasksByProject.reduce((sum, row) => sum + row.total, 0)
-                  : stats.tasksByProject.find((row) => row.key === filters.project)?.total ?? 0}
-              </div>
+            <div className="stat-card pop">
+              <h4>Completed</h4>
+              <p className="stat-value">{stats.summary.completed}</p>
             </div>
 
-            <div className="stat-card">
-              <div className="stat-label">Completed Tasks</div>
-              <div className="stat-value">{stats.summary.completed}</div>
-            </div>
-
-            <div className="stat-card">
-              <div className="stat-label">Open Tasks</div>
-              <div className="stat-value">{stats.summary.open}</div>
+            <div className="stat-card pop">
+              <h4>Open</h4>
+              <p className="stat-value">{stats.summary.open}</p>
             </div>
           </div>
 
-          <div className="chart-grid">
-            <div className="chart-card">
-              <h3>Tasks by Project</h3>
-              {stats.tasksByProject.length ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={stats.tasksByProject}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="key" />
-                    <YAxis allowDecimals={false} />
-                    <Tooltip formatter={tooltipFormatter} />
-                    <Bar dataKey="total" fill="#2563eb" radius={[6, 6, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="empty-state">No project data yet.</div>
-              )}
+          {/* Pie Chart */}
+          <div className="chart-card glass-card">
+            <div className="flex-between">
+              <h3>Distribution</h3>
+
+              <select
+                value={pieType}
+                onChange={(e) => setPieType(e.target.value)}
+                className="pie-select"
+              >
+                <option value="project">By Project</option>
+                <option value="person">By Person</option>
+              </select>
             </div>
 
-            <div className="chart-card">
-              <h3>Tasks by Person</h3>
-              {stats.tasksByPerson.length ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={stats.tasksByPerson}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="key" />
-                    <YAxis allowDecimals={false} />
-                    <Tooltip formatter={tooltipFormatter} />
-                    <Bar dataKey="total" fill="#14b8a6" radius={[6, 6, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="empty-state">No person data yet.</div>
-              )}
-            </div>
-          </div>
-
-          <div className="table-card">
-            <div className="table-card-header">
-              <h2 style={{ margin: 0 }}>Detailed Analytics</h2>
-              <p style={{ margin: '0.25rem 0 0', color: '#64748b' }}>
-                Breakdown of totals by {detailedLabel.toLowerCase()}.
-              </p>
-            </div>
-
-            {detailedRows.length ? (
-              <div style={{ overflowX: 'auto' }}>
-                <table className="detail-table">
-                  <thead>
-                    <tr>
-                      <th>{detailedLabel}</th>
-                      <th>Total Tasks</th>
-                      <th>Completed</th>
-                      <th>Open</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {detailedRows.map((row) => (
-                      <tr key={row.key}>
-                        <td>{row.key}</td>
-                        <td>{row.total}</td>
-                        <td>{row.completed}</td>
-                        <td>{row.open}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+            {pieData.length ? (
+              <ResponsiveContainer width="100%" height={330}>
+              <PieChart>
+                <Pie
+                  data={pieData}
+                  dataKey="total"
+                  nameKey="key"
+                  outerRadius={120}
+                  innerRadius={60}
+                  paddingAngle={3}
+                  animationBegin={0}
+                  animationDuration={800}
+                  label={({ name, percent }) =>
+                    `${name} (${(percent * 100).toFixed(1)}%)`
+                  }
+                  labelLine={false}
+                >
+                  {pieData.map((_, index) => (
+                    <Cell key={index} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  formatter={(value, name, props) => [
+                    value,
+                    `${props.payload.key} (${((value / stats.summary.total) * 100).toFixed(
+                      1
+                    )}%)`,
+                  ]}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+            
             ) : (
-              <div className="empty-state">Add more tasks to see detailed analytics.</div>
+              <div className="empty-state">No data yet</div>
             )}
+          </div>
+
+          {/* Bar Charts */}
+          <div className="chart-grid">
+            <div className="chart-card glass-card">
+              <h3>Tasks by Project</h3>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={stats.tasksByProject}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="key" />
+                  <YAxis allowDecimals={false} />
+                  <Tooltip />
+                  <Bar dataKey="total" fill="#6366f1" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            <div className="chart-card glass-card">
+              <h3>Tasks by Person</h3>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={stats.tasksByPerson}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="key" />
+                  <YAxis allowDecimals={false} />
+                  <Tooltip />
+                  <Bar dataKey="total" fill="#22c55e" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Table */}
+          <div className="table-card glass-card">
+            <h3>Detailed Analytics</h3>
+            <table className="detail-table">
+              <thead>
+                <tr>
+                  <th>{detailedLabel}</th>
+                  <th>Total</th>
+                  <th>Completed</th>
+                  <th>Open</th>
+                </tr>
+              </thead>
+              <tbody>
+                {detailedRows.map((row) => (
+                  <tr key={row.key}>
+                    <td>{row.key}</td>
+                    <td>{row.total}</td>
+                    <td>{row.completed}</td>
+                    <td>{row.open}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </>
       )}
@@ -270,5 +307,3 @@ function AnalyticsPage() {
 }
 
 export default AnalyticsPage;
-
-

@@ -281,6 +281,58 @@ button {
 .icon-button.delete:hover {
   color: var(--danger);
 }
+.fade-in {
+  animation: fadeIn .6s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.page-card, .chart-card, .table-card, .stat-card {
+  background: #ffffff;
+  padding: 1.5rem;
+  border-radius: 14px;
+  transition: 0.3s;
+}
+
+.glass-card {
+  background: rgba(255,255,255,0.65);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.3);
+}
+
+.stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+}
+
+.stats-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  margin-bottom: 1.5rem;
+}
+
+.chart-grid {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+  margin-bottom: 2rem;
+}
+
+.filters-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.pie-select {
+  padding: 6px 10px;
+  border-radius: 8px;
+}
+
 
 .stats-grid {
   display: grid;
