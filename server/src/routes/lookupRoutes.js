@@ -1,9 +1,13 @@
 const express = require('express');
-const { createLookupValue, getLookupValues } = require('../controllers/lookupController');
+const { createLookupValue, getLookupValues, deleteLookupValue } = require('../controllers/lookupController');
+const { protect, requireAdmin } = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
-router.route('/').get(getLookupValues).post(createLookupValue);
+router.use(protect);
+
+router.route('/').get(getLookupValues).post(requireAdmin, createLookupValue);
+router.route('/:id').delete(requireAdmin, deleteLookupValue);
 
 module.exports = router;
 

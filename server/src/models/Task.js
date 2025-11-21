@@ -35,6 +35,14 @@ const taskSchema = new Schema(
     plannedEnd: Date,
     actualStart: Date,
     actualEnd: Date,
+    createdBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    createdByName: {
+      type: String,
+      trim: true,
+    },
   },
   {
     timestamps: true,

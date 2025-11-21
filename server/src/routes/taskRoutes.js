@@ -8,8 +8,11 @@ const {
   getTaskStats,
   getTaskOptions,
 } = require('../controllers/taskController');
+const { protect } = require('../middleware/authMiddleware');
 
 const router = express.Router();
+
+router.use(protect);
 
 router.route('/').get(getTasks).post(createTask);
 router.route('/stats').get(getTaskStats);

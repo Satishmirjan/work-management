@@ -25,6 +25,8 @@ const createTask = async (req, res) => {
     plannedEnd: toDateOrNull(plannedEnd),
     actualStart: toDateOrNull(actualStart),
     actualEnd: toDateOrNull(actualEnd),
+    createdBy: req.user.id,
+    createdByName: req.user.displayName || req.user.username,
   });
 
   res.status(201).json(task);
@@ -32,12 +34,14 @@ const createTask = async (req, res) => {
 
 const getTasks = async (req, res) => {
   const filters = buildTaskFilters(req.query);
-  const tasks = await Task.find(filters).sort({ workDate: -1, createdAt: -1 });
+  const tasks = await Task.find(filters)
+    .sort({ workDate: -1, createdAt: -1 })
+    .populate('createdBy', 'username displayName role');
   res.json(tasks);
 };
 
 const getTaskById = async (req, res) => {
-  const task = await Task.findById(req.params.id);
+  const task = await Task.findById(req.params.id).populate('createdBy', 'username displayName role');
   if (!task) {
     res.status(404);
     throw new Error('Task not found');
@@ -50,6 +54,15 @@ const updateTask = async (req, res) => {
   if (!task) {
     res.status(404);
     throw new Error('Task not found');
+  }
+
+  const hasOwner = Boolean(task.createdBy);
+  const isOwner = hasOwner && task.createdBy.toString() === req.user.id;
+  const isAdmin = req.user.role === 'admin';
+
+  if ((hasOwner && !isOwner && !isAdmin) || (!hasOwner && !isAdmin)) {
+    res.status(403);
+    throw new Error('You can only edit tasks you created');
   }
 
   const payload = {
@@ -75,6 +88,15 @@ const deleteTask = async (req, res) => {
   if (!task) {
     res.status(404);
     throw new Error('Task not found');
+  }
+
+  const hasOwner = Boolean(task.createdBy);
+  const isOwner = hasOwner && task.createdBy.toString() === req.user.id;
+  const isAdmin = req.user.role === 'admin';
+
+  if ((hasOwner && !isOwner && !isAdmin) || (!hasOwner && !isAdmin)) {
+    res.status(403);
+    throw new Error('You can only delete tasks you created');
   }
   await task.deleteOne();
   res.json({ message: 'Task removed' });

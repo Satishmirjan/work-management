@@ -41,9 +41,21 @@ const createLookupValue = async (req, res) => {
   res.status(201).json({ id: record._id, value: record.value, type: record.type });
 };
 
+const deleteLookupValue = async (req, res) => {
+  const record = await LookupValue.findById(req.params.id);
+  if (!record) {
+    res.status(404);
+    throw new Error('Lookup value not found');
+  }
+
+  await record.deleteOne();
+  res.json({ message: 'Lookup value removed' });
+};
+
 module.exports = {
   getLookupValues,
   createLookupValue,
+  deleteLookupValue,
 };
 
 
