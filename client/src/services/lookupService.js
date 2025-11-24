@@ -10,4 +10,9 @@ export const createLookupValue = async (payload) => {
   return data;
 };
 
+export const deleteLookupValue = async (id) => {
+  await apiClient.delete(`/lookups/${id}`);
+  return true;
+};
+
 

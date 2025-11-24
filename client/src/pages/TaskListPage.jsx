@@ -12,6 +12,7 @@ import {
   defaultPeople,
   defaultProjects,
 } from '../constants/options';
+import { useAuth } from '../context/AuthContext';
 
 const defaultFilters = {
   project: 'all',
@@ -29,6 +30,7 @@ const formatDate = (value) => (value ? dayjs(value).format('DD MMM YYYY') : '—
 
 function TaskListPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [filters, setFilters] = useState(defaultFilters);
   const [appliedFilters, setAppliedFilters] = useState(defaultFilters);
   const [tasks, setTasks] = useState([]);
@@ -92,7 +94,35 @@ function TaskListPage() {
     setAppliedFilters(defaultFilters);
   };
 
+  const canModifyTask = useCallback(
+    (task) => {
+      if (!user) {
+        return false;
+      }
+      if (user.role === 'admin') {
+        return true;
+      }
+
+      if (!task?.createdBy) {
+        return false;
+      }
+
+      if (typeof task.createdBy === 'string') {
+        return task.createdBy === user.id;
+      }
+
+      return task.createdBy._id === user.id || task.createdBy.id === user.id;
+    },
+    [user],
+  );
+
   const handleDelete = async (taskId) => {
+    const targetTask = tasks.find((task) => task._id === taskId);
+    if (!canModifyTask(targetTask)) {
+      setError('You can only delete tasks you created.');
+      return;
+    }
+
     if (!window.confirm('Delete this task?')) {
       return;
     }
@@ -127,6 +157,7 @@ function TaskListPage() {
           <thead>
             <tr>
               <th>Task Name</th>
+              <th>Owner</th>
               <th>Person</th>
               <th>Project</th>
               <th>Milestone</th>
@@ -140,46 +171,55 @@ function TaskListPage() {
             </tr>
           </thead>
           <tbody>
-            {tasks.map((task) => (
-              <tr key={task._id}>
-                <td>{task.name}</td>
-                <td>{task.person}</td>
-                <td>{task.project}</td>
-                <td>{task.milestone || 'None'}</td>
-                <td>{task.genericActivity}</td>
-                <td>{formatDate(task.workDate)}</td>
-                <td>{formatDate(task.plannedStart)}</td>
-                <td>{formatDate(task.plannedEnd)}</td>
-                <td>{formatDate(task.actualStart)}</td>
-                <td>{formatDate(task.actualEnd)}</td>
-                <td>
-                  <div className="action-buttons">
-                    <button
-                      type="button"
-                      className="icon-button edit"
-                      onClick={() => navigate(`/tasks/${task._id}/edit`)}
-                      title="Edit"
-                    >
-                      ✏
-                    </button>
-                    <button
-                      type="button"
-                      className="icon-button delete"
-                      onClick={() => handleDelete(task._id)}
-                      title="Delete"
-                      disabled={deletingId === task._id}
-                    >
-                      🗑
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+            {tasks.map((task) => {
+              const ownerName =
+                (typeof task.createdBy === 'object' && task.createdBy !== null && (task.createdBy.displayName || task.createdBy.username)) ||
+                task.createdByName ||
+                '—';
+              const allowManage = canModifyTask(task);
+              return (
+                <tr key={task._id}>
+                  <td>{task.name}</td>
+                  <td>{ownerName}</td>
+                  <td>{task.person}</td>
+                  <td>{task.project}</td>
+                  <td>{task.milestone || 'None'}</td>
+                  <td>{task.genericActivity}</td>
+                  <td>{formatDate(task.workDate)}</td>
+                  <td>{formatDate(task.plannedStart)}</td>
+                  <td>{formatDate(task.plannedEnd)}</td>
+                  <td>{formatDate(task.actualStart)}</td>
+                  <td>{formatDate(task.actualEnd)}</td>
+                  <td>
+                    <div className="action-buttons">
+                      <button
+                        type="button"
+                        className="icon-button edit"
+                        onClick={() => navigate(`/tasks/${task._id}/edit`)}
+                        title={allowManage ? 'Edit' : 'Only the owner can edit this task'}
+                        disabled={!allowManage}
+                      >
+                        ✏
+                      </button>
+                      <button
+                        type="button"
+                        className="icon-button delete"
+                        onClick={() => handleDelete(task._id)}
+                        title={allowManage ? 'Delete' : 'Only the owner can delete this task'}
+                        disabled={deletingId === task._id || !allowManage}
+                      >
+                        🗑
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
     );
-  }, [loading, error, tasks, deletingId, navigate]);
+  }, [loading, error, tasks, deletingId, navigate, canModifyTask]);
 
   return (
     <section>
